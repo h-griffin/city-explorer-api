@@ -7,71 +7,90 @@ const app = express(); //invoke express library
 
 const PORT = process.env.PORT || 3000; //what port
 
-function Location(city, data) {
-  this.search_query = city;
+function Location(data, searchQuery) {
+  this.search_query = searchQuery;
   this.formatted_query = data.display_name;
   this.latitude = data.lat;
   this.longitude = data.lon;
 }
 
-function handleLocation(request, response){
-  const cityQuery = request.query.city;
-  const locationData = require('./data/location.json');
-
-  for (i in locationData) {
-    if (locationData[i].display_name.search(cityQuery)){
-      const location = new Location(city.query, locationData[i]);
-      response.send('Successful Search');
-      return;
-    }
-  }
-
-  console.log(cityQuery, locationData);
-  handleError ('soemthins wong', request, response);
-  // const latitiude = jsonData[0].lat;
-  // const longitude = jsonData[0].lon;
-  response.send('Whoops');
+function Weather(obj) {
+  this.time = new Date(obj.time * 1000).toDateString();
+  this.forecast = obj.summary;
 }
+// function handleLocation(request, response) {
+//   let location;
+//   let locations = require('./data/location.json');
+//   let filterValue = request.query.city;
 
-function Forecast(time, forecast) {
-  this.forecast = forecast;
-  this.time = new Date(date).toDateString();
-}
-
-function handleWeather(request, response) {
-  const weatherData = require('./data/weather.json').data;
-
-  const results = [];
-  weatherData.forEach(item => {
-    results.push(new Forecast(item.datetime, item.weather.description));
-  });
-  response.send('done weather');
-}
-
-function handleError(error, request, response){
-  response.status(500).send({
-    status: 500,
-    responseText: 'Sorry, somethings wrong'
-  });
-}
-
-// app.get('/location', ( (handleLocation) => {
-//   let geo = require('./data/geo.json'); //get info from geo.json
-
-//   let location = new Location(geo[0], 'city'); //new location / get first / city from request
-//   if (location) {
-//     response.status(200).send(location);
-//   }else{
-//     response.status(404).send('Cant find your city');
+//   for (let i in locations) {
+//     console.log(locations[i].display_name.toLowerCase().includes
+//     (filterValue.toLowerCase()));
+//     if (locations[i].display_name.toLowerCase().includes(filterValue.toLowerCase())) {
+//       console.log(filterValue);
+//       console.log(locations[i].display_name);
+//       location = new Location(locations[i], filterValue);
+//       console.log(location, 'hdkghs');
+//       response.status(200).send(location);
+//     }
+//     // console.log(typeof location !== 'undefined');
+//     // }if(typeof location !== 'undefined') {
+//     //   console.log('bingbong');
+//     //   // response.status(200).send(location);
+//     // }
+//     else {
+//       throw new Error('BROKEN');
+//     }
 //   }
-// });
+// }
+
+
+// function handleWeather(request, response) {
+//   const weatherData = require('./data/weather.json').data;
+
+//   const results = [];
+//   weatherData.forEach(item => {
+//     results.push(new Forecast(item.datetime, item.weather.description));
+//   });
+//   response.send(results);
+// }
+
+// function handleError(error, request, response, next){
+//   response.status(500).send({
+//     status: 500,
+//     responseText: 'Sorry, somethings wrong'
+//   });
+// }
+
+function handleLocation(request, response){
+  try{
+    let cityQuery = request.query.city;
+    let locationData = require('./data/location.json');
+    let location = new Location(locationData[0], cityQuery);
+    response.send(location);
+  }catch(err){
+    response.status(500).send(err);
+    console.error(err);
+  }
+}
+
+function handleWeather (request, response){
+
+  let weatherData = require('./data/weather.json');
+  let weatherArr = weatherData.daily.data;
+
+  const finalWeatherArr = weatherArr.map(day => {
+    return new Weather(day);
+  });
+  response.send(finalWeatherArr);
+}
+
+app.get('/location', handleLocation);
+
+app.get('/weather', handleWeather);
 
 app.use(cors());
-app.get('/location', handleLocation);
-app.get('/weather', handleWeather);
-// app.use(() => {
-// handleError('something bad happened');
-// });
+// app.use(handleError);
 
 //start sever / listen for requests
 app.listen(PORT, () => {
