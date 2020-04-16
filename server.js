@@ -2,95 +2,94 @@
 
 require('dotenv').config(); //import dotenv library
 const express = require('express'); //import express library
-const cors = require('cors'); //import cors library
 const app = express(); //invoke express library
+const superagent = require('superagent'); //superagent library
+const cors = require('cors'); //import cors library
+const pg = require('pg');
 
 const PORT = process.env.PORT || 3000; //what port
+app.use(cors());
 
-function Location(data, searchQuery) {
+const dbClient = new pg.Client(process.env.DATABASE_URL);
+dbClient.connect();
+
+dbClient.on('error', error => console.log(error));
+
+function Location(searchQuery, data) {
   this.search_query = searchQuery;
   this.formatted_query = data.display_name;
   this.latitude = data.lat;
   this.longitude = data.lon;
 }
 
-function Weather(obj) {
-  this.time = new Date(obj.time * 1000).toDateString();
-  this.forecast = obj.summary;
+function Weather(obj, forecast) {
+  this.time = new Date(obj).toDateString();
+  this.forecast = forecast;
 }
-// function handleLocation(request, response) {
-//   let location;
-//   let locations = require('./data/location.json');
-//   let filterValue = request.query.city;
 
-//   for (let i in locations) {
-//     console.log(locations[i].display_name.toLowerCase().includes
-//     (filterValue.toLowerCase()));
-//     if (locations[i].display_name.toLowerCase().includes(filterValue.toLowerCase())) {
-//       console.log(filterValue);
-//       console.log(locations[i].display_name);
-//       location = new Location(locations[i], filterValue);
-//       console.log(location, 'hdkghs');
-//       response.status(200).send(location);
-//     }
-//     // console.log(typeof location !== 'undefined');
-//     // }if(typeof location !== 'undefined') {
-//     //   console.log('bingbong');
-//     //   // response.status(200).send(location);
-//     // }
-//     else {
-//       throw new Error('BROKEN');
-//     }
-//   }
-// }
-
-
-// function handleWeather(request, response) {
-//   const weatherData = require('./data/weather.json').data;
-
-//   const results = [];
-//   weatherData.forEach(item => {
-//     results.push(new Forecast(item.datetime, item.weather.description));
-//   });
-//   response.send(results);
-// }
-
-// function handleError(error, request, response, next){
-//   response.status(500).send({
-//     status: 500,
-//     responseText: 'Sorry, somethings wrong'
-//   });
-// }
+function handleError(error, request, response){
+  response.status(500).send({
+    status: 500,
+    responseText: 'Sorry, somethings wrong'
+  });
+}
 
 function handleLocation(request, response){
-  try{
-    let cityQuery = request.query.city;
-    let locationData = require('./data/location.json');
-    let location = new Location(locationData[0], cityQuery);
-    response.send(location);
-  }catch(err){
-    response.status(500).send(err);
-    console.error(err);
-  }
+  console.log('test');
+  let cityQuery = request.query.city;
+  const key = process.env.GEOCODE_API_KEY;
+  const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${cityQuery}&format=json&limit=1`;
+  console.log(url);
+  superagent.get(url)
+    .then(locationResponse => {
+      const data = locationResponse.body;
+      for (var i in data){
+        if (data[i].display_name.search(cityQuery)){
+          const location = new Location (cityQuery, data[i]);
+          console.log(location);
+          response.send(location);
+        }
+      }
+    })
+    .catch(error => {
+      handleError(error, request, response);
+    });
 }
 
+console.log('hello?');
+
 function handleWeather (request, response){
+  const { latitude, longitude } = request.query;
+  const key = process.env.WEATHER_API_KEY;
+  const url = `https://api.weatherbit.io/v2.0/forecast/daily?lat=${latitude}&lon=${longitude}&key=${key}`;
 
-  let weatherData = require('./data/weather.json');
-  let weatherArr = weatherData.daily.data;
+  superagent.get(url)
+    .then(weatherResponse => {
+      const data = weatherResponse.body.data;
+      const results = [];
+      data.forEach(item => {
+        results.push(new Weather(item.datetime, item.weather.description));
+      });
+      response.send(results);
+    }).catch(error => {
+      handleError(error, request, response);
+    });
+}
 
-  const finalWeatherArr = weatherArr.map(day => {
-    return new Weather(day);
-  });
-  response.send(finalWeatherArr);
+function Trails(obj){
+  this.name = obj.name;
+  this.location = obj.location;
+  this.length = obj.length;
+  this.stars = obj.stars;
+  this.star_votes = obj.starVotes;
+  this.summary = obj.summary;
+  this.trail_url = obj.url;
+  this.conditions = obj.conditionDetails;
 }
 
 app.get('/location', handleLocation);
-
 app.get('/weather', handleWeather);
-
-app.use(cors());
-// app.use(handleError);
+app.use('*', (request, response) => response.send('sorry that rout does not exist'));
 
 //start sever / listen for requests
 app.listen(PORT, () => {
