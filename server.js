@@ -16,14 +16,6 @@ const dbClient = new pg.Client(process.env.DATABASE_URL);
 //move to bottom
 //figure out what one of these i need
 dbClient.on('error', error => console.log(error));
-//or
-dbClient.connect((err) => {
-  if (err){
-    console.log(err);
-  }else{
-    app.listen(PORT);
-  }
-});
 
 function Location(searchQuery, data) {
   this.search_query = searchQuery;
@@ -37,12 +29,25 @@ function Weather(obj, forecast) {
   this.forecast = forecast;
 }
 
-// function handleError(error, request, response){
-//   response.status(500).send({
-//     status: 500,
-//     responseText: 'Sorry, somethings wrong'
-//   });
+// function Trails(obj){
+//   this.name = obj.name;
+//   this.location = obj.location;
+//   this.length = obj.length;
+//   this.stars = obj.stars;
+//   this.star_votes = obj.starVotes;
+//   this.summary = obj.summary;
+//   this.trail_url = obj.url;
+//   this.conditions = obj.conditionDetails;
+//   this.condition_date = trail.conditionDate;
+//   this.condition_time = trail.conditionTime;
 // }
+
+function handleError(error, request, response){
+  response.status(500).send({
+    status: 500,
+    responseText: 'Sorry, somethings wrong'
+  });
+}
 
 // function handleLocation(request, response){
 //   console.log('test');
@@ -52,7 +57,7 @@ function Weather(obj, forecast) {
 //   const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${cityQuery}&format=json&limit=1`;
 
 //   let searchSQL = `SELECT * FROM locations WHERE search_query=$1 RETURNS *;`;
-//   let searchValues = [city];
+//   let searchValues = [cityQuery];
 //   let insertSQL = `INSERT INTO locations(search_query, display_name, latitude, longitude) VALUEs ($1, $2, $3, $4);`;
 
 //   dbClient.query(searchSQL, searchValues)
@@ -63,18 +68,20 @@ function Weather(obj, forecast) {
 //         //do superagent stuff
 //         superagent.get(url)
 //           .then(locationResponse => {
-//             let insertValues = [results.body[0]];
-//             dbClient.query(insertSQL, insertValues);
-//               .then
-
-//             const data = locationResponse.body;
-//             for (var i in data){
-//               if (data[i].display_name.search(cityQuery)){
-//                 const location = new Location (cityQuery, data[i]);
-//                 console.log(location);
-//                 response.send(location);
-//               }
-//             }
+//             let insertValues = [cityQuery, locationResponse.body[0].display_name, locationResponse.body[0].lat, locationResponse.body[0].lon];
+//             dbClient.query(insertSQL, insertValues)
+//               .then( () => {
+//                 console.log('test2');
+//                 // declaredLocationResponse(locationResponse, response, city);
+//                 const data = locationResponse.body;
+//                 for (var i in data){
+//                   if (data[i].display_name.search(cityQuery)){
+//                     const location = new Location (cityQuery, data[i]);
+//                     console.log(location);
+//                     response.send(location);
+//                   }
+//                 }
+//               });
 //           })
 //           .catch(error => {
 //             handleError(error, request, response);
@@ -84,49 +91,64 @@ function Weather(obj, forecast) {
 //     .catch(sqlError => {
 //       handleError(sqlError, request, response);
 //     });
-
-//   console.log(url);
 // }
 
 function handleLocation(request, response){
-  let cityQuery = request.query.city;
+  let searchQuery = request.query.city;
   const key = process.env.GEOCODE_API_KEY;
-  const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${cityQuery}&format=json&limit=1`;
+  // const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${searchQuery}&format=json&limit=1`;
+  const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${searchQuery}`;
 
-  let searchSQL = `SELECT * FROM locations WHERE search_query=$1 RETURNS *;`;
-  let searchValues = [city];
-  let insertSQL = `INSERT INTO locations(search_query, display_name, latitude, longitude) VALUEs ($1, $2, $3, $4);`;
+  // let searchSQL = `SELECT * FROM locations WHERE search_query=$1 RETURNS *;`;
+  // let searchValues = [searchQuery];
+  // let insertSQL = `INSERT INTO locations(search_query, display_name, latitude, longitude) VALUEs ($1, $2, $3, $4);`;
 
-  dbClient.query(searchSQL, searchValues)
-    .then(sqlResults => sqlResults.rows[0])
-    .then(location => {
-      if (location){
-        response.send(location);
-        // return location;
-      }else{
-        return superagent.get(url);
-      }
+  console.log(request);
+  superagent.get(url)
+    .then(result => {
+      const location = new Location(searchQuery, result);
+      response.send(location);
     })
-    .then(locationResponse => {
-      if(locationResponse){
-        let insertValues = [city, locationResponse.body[0].display_name,]
-        return dbClient(insertSQL, insertValues);
-      }else{
-        return null;
-      }
-    })
-    .then(response => {
-      location
-    })
-    .then(locationResponse => {
 
-    })
+  // superagent.get(url)
+  //   .then(data => {
+  //     console.log(url);
+  //     let newLocation = new Location(searchQuery, data);
+  //     console.log(newLocation, 'location?');
+  //     response.send(newLocation);
+  //   })
+
+  // dbClient.query(searchSQL, searchValues)
+  //   .then(sqlResults => sqlResults.rows[0])
+  //   .then(location => {
+  //     if (location){
+  //       response.send(location);
+  //       return null;
+  //     }else{
+  //       return superagent.get(url);
+  //     }
+  //   })
+  //   .then(locationResponse => {
+  //     if(locationResponse){
+  //       let insertValues = [cityQuery, locationResponse.body[0].display_name, locationResponse.body[0].lat, locationResponse.body[0].lon];
+  //       dbClient.query(insertSQL, insertValues);
+  //       return locationResponse;
+  //     }else{
+  //       return null;
+  //     }
+  //   })
+  //   .then(locationResponse => {
+  //     if(locationResponse) {
+  //       const data = locationResponse.body;
+  //       for (var i in data){
+  //         const location = new Location (searchQuery, data[i]);
+  //         response.send(location);
+  //       }
+  //     }})
     .catch(error => {
-      handleError()
-    })
+      handleError(error, request, response);
+    });
 }
-
-console.log('hello?');
 
 function handleWeather (request, response){
   const { latitude, longitude } = request.query;
@@ -146,23 +168,23 @@ function handleWeather (request, response){
     });
 }
 
-// function Trails(obj){
-//   this.name = obj.name;
-//   this.location = obj.location;
-//   this.length = obj.length;
-//   this.stars = obj.stars;
-//   this.star_votes = obj.starVotes;
-//   this.summary = obj.summary;
-//   this.trail_url = obj.url;
-//   this.conditions = obj.conditionDetails;
-// }
-
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.use('*', (request, response) => response.send('sorry that rout does not exist'));
 
-//start sever / listen for requests
-app.listen(PORT, () => {
-  console.log('Server is running on PORT: ' + PORT);
-
+//turn on database and server
+dbClient.connect((err) => {
+  if (err){
+    console.log(err);
+  }else{
+    app.listen(PORT, () => {
+      console.log('Server is running on PORT: ' + PORT);
+    });
+  }
 });
+
+//start sever / listen for requests
+// app.listen(PORT, () => {
+//   console.log('Server is running on PORT: ' + PORT);
+
+// });
