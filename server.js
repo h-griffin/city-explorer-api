@@ -1,19 +1,29 @@
 'use strict';
 
-require('dotenv').config(); //import dotenv library
-const express = require('express'); //import express library
-const app = express(); //invoke express library
-const superagent = require('superagent'); //superagent library
-const cors = require('cors'); //import cors library
+//import / invoke libraries
+require('dotenv').config();
+const express = require('express');
+const app = express();
+const superagent = require('superagent');
+const cors = require('cors');
 const pg = require('pg');
 
 const PORT = process.env.PORT || 3000; //what port
 app.use(cors());
 
 const dbClient = new pg.Client(process.env.DATABASE_URL);
-dbClient.connect();
 
+//move to bottom
+//figure out what one of these i need
 dbClient.on('error', error => console.log(error));
+//or
+dbClient.connect((err) => {
+  if (err){
+    console.log(err);
+  }else{
+    app.listen(PORT);
+  }
+});
 
 function Location(searchQuery, data) {
   this.search_query = searchQuery;
@@ -27,33 +37,93 @@ function Weather(obj, forecast) {
   this.forecast = forecast;
 }
 
-function handleError(error, request, response){
-  response.status(500).send({
-    status: 500,
-    responseText: 'Sorry, somethings wrong'
-  });
-}
+// function handleError(error, request, response){
+//   response.status(500).send({
+//     status: 500,
+//     responseText: 'Sorry, somethings wrong'
+//   });
+// }
+
+// function handleLocation(request, response){
+//   console.log('test');
+
+//   let cityQuery = request.query.city;
+//   const key = process.env.GEOCODE_API_KEY;
+//   const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${cityQuery}&format=json&limit=1`;
+
+//   let searchSQL = `SELECT * FROM locations WHERE search_query=$1 RETURNS *;`;
+//   let searchValues = [city];
+//   let insertSQL = `INSERT INTO locations(search_query, display_name, latitude, longitude) VALUEs ($1, $2, $3, $4);`;
+
+//   dbClient.query(searchSQL, searchValues)
+//     .then(sqlResults => {
+//       if(sqlResults.rows[0]){
+//         response.send(sqlResults.rows[0]);
+//       }else{
+//         //do superagent stuff
+//         superagent.get(url)
+//           .then(locationResponse => {
+//             let insertValues = [results.body[0]];
+//             dbClient.query(insertSQL, insertValues);
+//               .then
+
+//             const data = locationResponse.body;
+//             for (var i in data){
+//               if (data[i].display_name.search(cityQuery)){
+//                 const location = new Location (cityQuery, data[i]);
+//                 console.log(location);
+//                 response.send(location);
+//               }
+//             }
+//           })
+//           .catch(error => {
+//             handleError(error, request, response);
+//           });
+//       }
+//     })
+//     .catch(sqlError => {
+//       handleError(sqlError, request, response);
+//     });
+
+//   console.log(url);
+// }
 
 function handleLocation(request, response){
-  console.log('test');
   let cityQuery = request.query.city;
   const key = process.env.GEOCODE_API_KEY;
   const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${cityQuery}&format=json&limit=1`;
-  console.log(url);
-  superagent.get(url)
-    .then(locationResponse => {
-      const data = locationResponse.body;
-      for (var i in data){
-        if (data[i].display_name.search(cityQuery)){
-          const location = new Location (cityQuery, data[i]);
-          console.log(location);
-          response.send(location);
-        }
+
+  let searchSQL = `SELECT * FROM locations WHERE search_query=$1 RETURNS *;`;
+  let searchValues = [city];
+  let insertSQL = `INSERT INTO locations(search_query, display_name, latitude, longitude) VALUEs ($1, $2, $3, $4);`;
+
+  dbClient.query(searchSQL, searchValues)
+    .then(sqlResults => sqlResults.rows[0])
+    .then(location => {
+      if (location){
+        response.send(location);
+        // return location;
+      }else{
+        return superagent.get(url);
       }
     })
+    .then(locationResponse => {
+      if(locationResponse){
+        let insertValues = [city, locationResponse.body[0].display_name,]
+        return dbClient(insertSQL, insertValues);
+      }else{
+        return null;
+      }
+    })
+    .then(response => {
+      location
+    })
+    .then(locationResponse => {
+
+    })
     .catch(error => {
-      handleError(error, request, response);
-    });
+      handleError()
+    })
 }
 
 console.log('hello?');
@@ -76,16 +146,16 @@ function handleWeather (request, response){
     });
 }
 
-function Trails(obj){
-  this.name = obj.name;
-  this.location = obj.location;
-  this.length = obj.length;
-  this.stars = obj.stars;
-  this.star_votes = obj.starVotes;
-  this.summary = obj.summary;
-  this.trail_url = obj.url;
-  this.conditions = obj.conditionDetails;
-}
+// function Trails(obj){
+//   this.name = obj.name;
+//   this.location = obj.location;
+//   this.length = obj.length;
+//   this.stars = obj.stars;
+//   this.star_votes = obj.starVotes;
+//   this.summary = obj.summary;
+//   this.trail_url = obj.url;
+//   this.conditions = obj.conditionDetails;
+// }
 
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
