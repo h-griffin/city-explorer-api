@@ -47,6 +47,23 @@ function Trail(obj){
 
 const splitDate = (str) => str.split(' ');
 
+function Movie(obj){
+  this.title = obj.title;
+  this.overview = obj.overview;
+  this.average_votes = obj.average_votes;
+  this.image_url = obj.image_url;
+  this.popularity = obj.popularity;
+  this.released_on = obj.released_on;
+}
+
+function Yelp(obj){
+  this.name = obj.name;
+  this.image_url = obj.image_url;
+  this.price = obj.price;
+  this.rating = obj.rating;
+  this.url = obj.url;
+}
+
 function handleError(error, request, response){
   console.log(error);
   response.status(400).send(error);
@@ -115,7 +132,6 @@ function handleTrails(request, response){
 
   superagent.get(url)
     .then(trailsResponse => {
-      console.log(trailsResponse.body);
       const data = trailsResponse.body.trails;
       response.send(data.map(item => {
         return new Trail(item);
@@ -126,9 +142,39 @@ function handleTrails(request, response){
     });
 }
 
+function handleMovie(request, response){
+  const city = request.query.search_query;
+  const key = process.env.MOVIE_API_KEY;
+  const url =`https://api.themoviedb.org/3/movie/550?api_key=${key}&query=${city}`;
+
+  superagent.get(url)
+    .then(movieResponse => {
+      const data = movieResponse.body.data;
+    })
+    .catch(error => {
+      handleError('movie error : super agent bad', request, response);
+    });
+}
+
+function handleYelp(request, response){
+  const city = request.query.search_query;
+  const key = process.env.YELP_API_KEY;
+  const url = 
+
+  superagent.get(url)
+    .then(yelpResponse => {
+      const data = yelpResponse.body.data;
+    })
+    .catch(error => {
+      handleError('yelp error : superagent bad', request, response);
+    });
+}
+
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
+// app.get('/movies', handleMovie);
+// app.get('/yelp', handleYelp);
 
 app.listen(PORT, () => {
   console.log('server is running on port: ' + PORT);
