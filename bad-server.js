@@ -90,10 +90,10 @@ app.listen(PORT, () => {
 //   this.longitude = data.body.results[0].geometry.location.lng;
 // }
 
-// function Weather(obj, forecast) {
-//   this.time = new Date(obj).toDateString();
-//   this.forecast = forecast;
-// }
+function Weather(obj, forecast) {
+  this.time = new Date(obj).toDateString();
+  this.forecast = forecast;
+}
 
 // function Trails(obj){
 //   this.name = obj.name;

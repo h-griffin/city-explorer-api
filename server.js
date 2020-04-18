@@ -27,6 +27,26 @@ function Location(searchQuery, data) {
   this.longitude = data.lon;
 }
 
+function Weather(obj) {
+  this.time = new Date(obj.datetime).toDateString();
+  this.forecast = obj.weather.description;
+}
+
+function Trail(obj){
+  this.name = obj.name;
+  this.location = obj.location;
+  this.length = obj.length;
+  this.stars = obj.stars;
+  this.star_votes = obj.starVotes;
+  this.summary = obj.summary;
+  this.trail_url = obj.url;
+  this.conditions = obj.conditionDetails;
+  this.condition_date = new Date (splitDate(obj.conditionDate)[0]).toDateString();
+  this.condition_time = splitDate(obj.conditionDate)[1];
+}
+
+const splitDate = (str) => str.split(' ');
+
 function handleError(error, request, response){
   console.log(error);
   response.status(400).send(error);
@@ -72,7 +92,43 @@ function handleLocation(request, response){
     });
 }
 
+function handleWeather (request, response){
+  const { latitude, longitude } = request.query;
+  const key = process.env.WEATHER_API_KEY;
+  const url = `https://api.weatherbit.io/v2.0/forecast/daily?lat=${latitude}&lon=${longitude}&key=${key}&days=7`;
+
+  superagent.get(url)
+    .then(weatherResponse => {
+      const data = weatherResponse.body.data;
+      response.send(data.map(item => {
+        return new Weather(item);
+      }));
+    }).catch(error => {
+      handleError('weather error : superagent bad', request, response);
+    });
+}
+
+function handleTrails(request, response){
+  const { latitude, longitude } = request.query;
+  const key = process.env.TRAIL_API_KEY;
+  const url =`https://www.hikingproject.com/data/get-trails?lat=${latitude}&lon=${longitude}&maxDistance=10&key=${key}`;
+
+  superagent.get(url)
+    .then(trailsResponse => {
+      console.log(trailsResponse.body);
+      const data = trailsResponse.body.trails;
+      response.send(data.map(item => {
+        return new Trail(item);
+      }));
+    })
+    .catch(error => {
+      handleError('trail error : superagent bad', request, response);
+    });
+}
+
 app.get('/location', handleLocation);
+app.get('/weather', handleWeather);
+app.get('/trails', handleTrails);
 
 app.listen(PORT, () => {
   console.log('server is running on port: ' + PORT);
