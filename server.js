@@ -47,21 +47,22 @@ function Trail(obj){
 
 const splitDate = (str) => str.split(' ');
 
-function Movie(obj){
-  this.title = obj.title;
-  this.overview = obj.overview;
-  this.average_votes = obj.average_votes;
-  this.image_url = obj.image_url;
-  this.popularity = obj.popularity;
-  this.released_on = obj.released_on;
+function Movie(movie){
+  this.title = movie.original_title;
+  this.overview = movie.overview.slice(0, 750);
+  this.average_votes = movie.votes_average;
+  this.total_votes = movie.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/original${movie.poster_path}`;
+  this.popularity = movie.popularity;
+  this.released_on = movie.release_date;
 }
 
-function Yelp(obj){
-  this.name = obj.name;
-  this.image_url = obj.image_url;
-  this.price = obj.price;
-  this.rating = obj.rating;
-  this.url = obj.url;
+function Yelp(yelp){
+  this.name = yelp.name;
+  this.image_url = yelp.image_url;
+  this.price = yelp.price;
+  this.rating = yelp.rating;
+  this.url = yelp.url;
 }
 
 function handleError(error, request, response){
@@ -148,8 +149,11 @@ function handleMovie(request, response){
   const url =`https://api.themoviedb.org/3/movie/550?api_key=${key}&query=${city}`;
 
   superagent.get(url)
-    .then(movieResponse => {
-      const data = movieResponse.body.data;
+    .then(movieResults => {
+      const movie = movieResults.body.results;
+      response.send(movie.map(result => {
+        return new Movie(result);
+      }));
     })
     .catch(error => {
       handleError('movie error : super agent bad', request, response);
@@ -159,11 +163,15 @@ function handleMovie(request, response){
 function handleYelp(request, response){
   const city = request.query.search_query;
   const key = process.env.YELP_API_KEY;
-  const url = 
+  const url = `https://api.yelp.com/v3/businesses/search?latitude=${latitude}&longitude=${longitude}`;
 
   superagent.get(url)
     .then(yelpResponse => {
-      const data = yelpResponse.body.data;
+      const review = yelpResults.body.buisness.map(yelp => {
+        let result = new Yelp(yelp);
+        return result;
+      });
+      response.send(review);
     })
     .catch(error => {
       handleError('yelp error : superagent bad', request, response);
@@ -173,8 +181,8 @@ function handleYelp(request, response){
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
-// app.get('/movies', handleMovie);
-// app.get('/yelp', handleYelp);
+app.get('/movies', handleMovie);
+app.get('/yelp', handleYelp);
 
 app.listen(PORT, () => {
   console.log('server is running on port: ' + PORT);
