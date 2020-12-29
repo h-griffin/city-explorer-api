@@ -1,5 +1,7 @@
 # city-explorer-api
 
+![app-overview](app-overview.png)
+
 **Author**: Haley Griffin
 **Version**: 
 - 1.0.0 - initialization
@@ -15,7 +17,7 @@
 - 3.2.0 - populate database with data pulled from API
 - 3.2.1 - added connection to db
 - 3.2.2 - db connection successful, rendering to page
-- 3.2.3 - **deprecated APIs no longer working**
+- **3.2.3 - deprecated APIs no longer working**
 
 ## links
 heroku: https://city-explorer-api-griffin.herokuapp.com/
